@@ -1,0 +1,13 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+    - name: Start
+      ec2:
+        region: eu-west-2
+        zone: eu-west-2a
+        state: stopped
+        instance_tags:
+          class: web1
