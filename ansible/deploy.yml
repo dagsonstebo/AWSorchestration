@@ -1,0 +1,39 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+    - name: Create VPC
+      ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ vpc_cidr }}"
+        region: "{{ def_aws_region }}"
+        multi_ok: false
+        state: present
+        tags:
+          environment: "{{ env_name }}"
+      register: rtn_vpc
+
+    - name: Debug VPC creation
+      debug: msg="VPC created with ID {{ rtn_vpc.vpc.id }}"
+
+    - name: Create subnets
+      ec2_vpc_subnet:
+        region: "{{ def_aws_region }}"
+        state: present
+        vpc_id: "{{ rtn_vpc.vpc.id }}"
+        az: "{{ item.value.az }}"
+        cidr: "{{ item.value.cidr }}"
+        tags:
+          environment: "{{ env_name }}"
+      with_dict: "{{ vpc_subnets }}"
+
+    - name: Start
+      ec2:
+        region: "{{ def_aws_region }}"
+        zone: "{{ def_aws_zone }}"
+        state: running
+        instance_tags:
+          class: web1
+          class: db

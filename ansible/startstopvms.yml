@@ -1,0 +1,16 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+
+    - name: Stop
+      ec2:
+        region: "{{ def_aws_region }}"
+        zone: "{{ def_aws_zone }}"
+        state: "{{ inststate }}"
+        instance_tags:
+          class: "{{ item }}"
+      with_items:
+        - web1
+        - db
