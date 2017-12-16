@@ -14,7 +14,9 @@ vpc_subnets:
     name: 10.1.0.0-eu-west-2a-PUBLIC
     az: eu-west-2a
     cidr: 10.1.0.0/24
+    type: public
   subnet2:
     name: 10.1.1.0-eu-west-2b-PUBLIC
     az: eu-west-2b
     cidr: 10.1.1.0/24
+    type: private

@@ -24,3 +24,34 @@
     tags:
       environment: "{{ env_name }}"
   with_dict: "{{ vpc_subnets }}"
+  register: rtn_subnets
+
+- name: Debug subnet creation
+  debug: msg="Subnets created with ID {{ rtn_subnets }}"
+
+- name: Create IGW
+  ec2_vpc_igw:
+    region: "{{ def_aws_region }}"
+    vpc_id: "{{ rtn_vpc.vpc.id }}"
+    state: present
+    tags:
+      environment: "{{ env_name }}"
+  register: rtn_igw
+
+- name: Debug IGW creation
+  debug: msg="IGW created with ID {{ rtn_igw.gateway_id }} and tags {{ rtn_igw.tags }}"
+
+#- name: Set up public subnet route table
+#  ec2_vpc_route_table:
+#    vpc_id: "{{ rtn_vpc.vpc.id }}"
+#    region: "{{ def_aws_region }}"
+#    tags:
+#      environment: "{{ env_name }}"
+#    subnets:
+#      - "{{ jumpbox_subnet.subnet.id }}"
+#      - "{{ frontend_subnet.subnet.id }}"
+#      - "{{ vpn_subnet.subnet_id }}"
+#    routes:
+#      - dest: 0.0.0.0/0
+#        gateway_id: "{{ igw.gateway_id }}"
+#  register: public_route_table
