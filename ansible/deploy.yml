@@ -8,8 +8,8 @@
   tasks:
     - name: Start
       ec2:
-        region: "{{ def_aws_region }}"
-        zone: "{{ def_aws_zone }}"
+        region: "{{ aws_region }}"
+        zone: "{{ aws_zone }}"
         state: stopped
         instance_tags:
           class: web1

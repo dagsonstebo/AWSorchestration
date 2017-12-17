@@ -1,12 +1,12 @@
 ---
 # AWS
-def_aws_region: eu-west-2
-def_aws_zone: eu-west-2a
+aws_region: eu-west-2
+aws_zone: eu-west-2a
 
 # Environment
 env_name: Development1
 
-#VPC
+#VPCs
 vpc_name: DSVPC2
 vpc_cidr: 10.1.0.0/16
 vpc_subnets:
@@ -15,8 +15,28 @@ vpc_subnets:
     az: eu-west-2a
     cidr: 10.1.0.0/24
     access: public
+    auto_assign_public_ip: true
   subnet2:
     name: 10.1.1.0-eu-west-2b-PRIVATE
     az: eu-west-2b
     cidr: 10.1.1.0/24
     access: private
+    auto_assign_public_ip: false
+
+VPCs:
+  - vpc1:
+      vpc_name: DSVPC2
+      vpc_cidr: 10.1.0.0/16
+      vpc_subnets:
+        subnet1:
+          name: 10.1.0.0-eu-west-2a-PUBLIC
+          az: eu-west-2a
+          cidr: 10.1.0.0/24
+          access: public
+          auto_assign_public_ip: true
+        subnet2:
+          name: 10.1.1.0-eu-west-2b-PRIVATE
+          az: eu-west-2b
+          cidr: 10.1.1.0/24
+          access: private
+          auto_assign_public_ip: false

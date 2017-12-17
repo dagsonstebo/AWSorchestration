@@ -4,7 +4,7 @@
   ec2_vpc_net:
     name: "{{ vpc_name }}"
     cidr_block: "{{ vpc_cidr }}"
-    region: "{{ def_aws_region }}"
+    region: "{{ aws_region }}"
     multi_ok: false
     state: present
     tags:
@@ -12,16 +12,17 @@
       environment: "{{ env_name }}"
   register: rtn_vpc
 
-- name: Debug VPC creation
+- name: Report VPC creation
   debug: msg="VPC created with ID {{ rtn_vpc.vpc.id }}"
 
 - name: Create subnets
   ec2_vpc_subnet:
-    region: "{{ def_aws_region }}"
+    region: "{{ aws_region }}"
     state: present
     vpc_id: "{{ rtn_vpc.vpc.id }}"
     az: "{{ item.value.az }}"
     cidr: "{{ item.value.cidr }}"
+    map_public: "{{ item.value.auto_assign_public_ip }}"
     tags:
       Name: "{{ item.value.name }}"
       environment: "{{ env_name }}"
@@ -29,29 +30,21 @@
   with_dict: "{{ vpc_subnets }}"
   register: rtn_subnets
 
-- name: Debug subnet creation
+- name: Report created subnets
   debug: msg="{{ item.subnet.tags.access }} subnet {{ item.subnet.cidr_block }} created with ID {{ item.subnet.id }} and tags {{ item.subnet.tags }}"
   with_items: "{{ rtn_subnets.results }}"
 
-- name: Concatenate public subnet list
+- name: Find public and private subnets
   set_fact:
-    public_subnets: []
+    public_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.access', '==', 'public') | map(attribute='subnet.id') | list}}"
+    private_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.access', '!=', 'public') | map(attribute='subnet.id') | list}}"
 
-- name: Concatenate public subnet list
-  set_fact:
-    public_subnets: "{{ public_subnets + [ item.subnet.id ] }}"
-  when: item.subnet.tags.access == "public"
-  with_items: "{{ rtn_subnets.results }}"
-
-- name: Report public subnets
-  debug: msg="Public subnets are {{ public_subnets }}"
-
-- name: Conc2
-  debug: msg="Public subnets are {{ rtn_subnets.results | selectattr('subnet.tags.access', 'equalto', 'public') | map(attribute='subnet.id') | join(',') }}"
+- name: Report public and private subnets
+  debug: msg="Public subnets {{ public_subnets | join('+') }}, private subnets {{ private_subnets | join('+') }}"
 
 - name: Create IGW
   ec2_vpc_igw:
-    region: "{{ def_aws_region }}"
+    region: "{{ aws_region }}"
     vpc_id: "{{ rtn_vpc.vpc.id }}"
     state: present
     tags:
@@ -59,21 +52,25 @@
       environment: "{{ env_name }}"
   register: rtn_igw
 
-- name: Debug IGW creation
+- name: Report created IGW
   debug: msg="IGW created with ID {{ rtn_igw.gateway_id }} and tags {{ rtn_igw.tags }}"
 
-- name: Set up public subnet route table
+- name: Set up public subnet route table, don't associate yet
   ec2_vpc_route_table:
     vpc_id: "{{ rtn_vpc.vpc.id }}"
-    region: "{{ def_aws_region }}"
+    region: "{{ aws_region }}"
     tags:
       Name: "{{ vpc_name }}-PublicRTBL"
       environment: "{{ env_name }}"
-    subnets:
-      - "{{ item }}"
     routes:
       - dest: 0.0.0.0/0
         gateway_id: "{{ rtn_igw.gateway_id }}"
-    with_items:
-      - "{{ public_subnets }}"
-#  register: rtn_public_rtbl
+  register: rtn_public_rtbl
+
+- name: Report created route table
+  debug: msg="Public route table {{ rtn_public_rtbl.route_table.tags.Name }} created {{ rtn_public_rtbl.route_table.id }}"
+
+- name: Assign route table - done using AWS CLI as ec2_vpc_route_table not idempotent in Ansible 2.4.2
+  shell: aws ec2 associate-route-table --route-table-id {{ rtn_public_rtbl.route_table.id }} --subnet-id {{ item }}
+  with_items:
+    - "{{ public_subnets }}"
