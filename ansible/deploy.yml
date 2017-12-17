@@ -10,7 +10,7 @@
       ec2:
         region: "{{ def_aws_region }}"
         zone: "{{ def_aws_zone }}"
-        state: running
+        state: stopped
         instance_tags:
           class: web1
           class: db

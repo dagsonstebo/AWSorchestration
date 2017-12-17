@@ -19,4 +19,4 @@ vpc_subnets:
     name: 10.1.1.0-eu-west-2b-PRIVATE
     az: eu-west-2b
     cidr: 10.1.1.0/24
-    access: public
+    access: private

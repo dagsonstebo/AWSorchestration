@@ -30,23 +30,24 @@
   register: rtn_subnets
 
 - name: Debug subnet creation
-  debug: msg="Subnet {{ item.subnet.cidr_block }} created with ID {{ item.subnet.id }} and tags {{ item.subnet.tags }}"
-  with_items: "{{ rtn_subnets.results }}"
-
-- name: Debug public subnet list
-  debug: msg="PUBLIC SUBNET {{ item.subnet.id }}"
-  when: item.subnet.tags.access == "public"
+  debug: msg="{{ item.subnet.tags.access }} subnet {{ item.subnet.cidr_block }} created with ID {{ item.subnet.id }} and tags {{ item.subnet.tags }}"
   with_items: "{{ rtn_subnets.results }}"
 
 - name: Concatenate public subnet list
   set_fact:
-    public_subnets: "{{ public_subnet | default([]) }} + [{{ item.subnet.id }}]"
+    public_subnets: []
+
+- name: Concatenate public subnet list
+  set_fact:
+    public_subnets: "{{ public_subnets + [ item.subnet.id ] }}"
   when: item.subnet.tags.access == "public"
   with_items: "{{ rtn_subnets.results }}"
 
 - name: Report public subnets
-  debug: msg="Public subnets are {{ item }}"
-  with_items: "{{ public_subnets }}"
+  debug: msg="Public subnets are {{ public_subnets }}"
+
+- name: Conc2
+  debug: msg="Public subnets are {{ rtn_subnets.results | selectattr('subnet.tags.access', 'equalto', 'public') | map(attribute='subnet.id') | join(',') }}"
 
 - name: Create IGW
   ec2_vpc_igw:
@@ -69,8 +70,10 @@
       Name: "{{ vpc_name }}-PublicRTBL"
       environment: "{{ env_name }}"
     subnets:
-      - "{{ public_subnets }}"
+      - "{{ item }}"
     routes:
       - dest: 0.0.0.0/0
         gateway_id: "{{ rtn_igw.gateway_id }}"
-  register: rtn_public_rtbl
+    with_items:
+      - "{{ public_subnets }}"
+#  register: rtn_public_rtbl
