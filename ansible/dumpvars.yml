@@ -1,0 +1,18 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    #- name: Dump all vars
+    #  action: template src=templates/allvars.j2 dest=/tmp/ansible.all
+
+    - name: test big dictionaries
+      debug: msg="{{ item.vpc_name }}"
+      with_items:
+        - "{{ VPCs }}"
+
+    - name: test big dictionaries
+      debug: msg="{{ item.0.vpc_name }} has subnets {{ item.1.subnet_name}} and {{ item.1.az}}"
+      with_subelements:
+        - "{{ VPCs }}"
+        - vpc_subnets

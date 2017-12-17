@@ -1,0 +1,6 @@
+---
+
+- name: test dictionaries
+  debug: msg="{{ outer_item.vpc_name }} {{ outer_item.vpc_cidr }} subnet {{ item.subnet_name }}"
+  with_items:
+    - "{{ outer_item.vpc_subnets }}"
