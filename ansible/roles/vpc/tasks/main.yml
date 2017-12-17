@@ -8,6 +8,7 @@
     multi_ok: false
     state: present
     tags:
+      Name: "{{ vpc_name }}"
       environment: "{{ env_name }}"
   register: rtn_vpc
 
@@ -22,12 +23,30 @@
     az: "{{ item.value.az }}"
     cidr: "{{ item.value.cidr }}"
     tags:
+      Name: "{{ item.value.name }}"
       environment: "{{ env_name }}"
+      access: "{{ item.value.access }}"
   with_dict: "{{ vpc_subnets }}"
   register: rtn_subnets
 
 - name: Debug subnet creation
-  debug: msg="Subnets created with ID {{ rtn_subnets }}"
+  debug: msg="Subnet {{ item.subnet.cidr_block }} created with ID {{ item.subnet.id }} and tags {{ item.subnet.tags }}"
+  with_items: "{{ rtn_subnets.results }}"
+
+- name: Debug public subnet list
+  debug: msg="PUBLIC SUBNET {{ item.subnet.id }}"
+  when: item.subnet.tags.access == "public"
+  with_items: "{{ rtn_subnets.results }}"
+
+- name: Concatenate public subnet list
+  set_fact:
+    public_subnets: "{{ public_subnet | default([]) }} + [{{ item.subnet.id }}]"
+  when: item.subnet.tags.access == "public"
+  with_items: "{{ rtn_subnets.results }}"
+
+- name: Report public subnets
+  debug: msg="Public subnets are {{ item }}"
+  with_items: "{{ public_subnets }}"
 
 - name: Create IGW
   ec2_vpc_igw:
@@ -35,23 +54,23 @@
     vpc_id: "{{ rtn_vpc.vpc.id }}"
     state: present
     tags:
+      Name: "{{ vpc_name }}-IGW"
       environment: "{{ env_name }}"
   register: rtn_igw
 
 - name: Debug IGW creation
   debug: msg="IGW created with ID {{ rtn_igw.gateway_id }} and tags {{ rtn_igw.tags }}"
 
-#- name: Set up public subnet route table
-#  ec2_vpc_route_table:
-#    vpc_id: "{{ rtn_vpc.vpc.id }}"
-#    region: "{{ def_aws_region }}"
-#    tags:
-#      environment: "{{ env_name }}"
-#    subnets:
-#      - "{{ jumpbox_subnet.subnet.id }}"
-#      - "{{ frontend_subnet.subnet.id }}"
-#      - "{{ vpn_subnet.subnet_id }}"
-#    routes:
-#      - dest: 0.0.0.0/0
-#        gateway_id: "{{ igw.gateway_id }}"
-#  register: public_route_table
+- name: Set up public subnet route table
+  ec2_vpc_route_table:
+    vpc_id: "{{ rtn_vpc.vpc.id }}"
+    region: "{{ def_aws_region }}"
+    tags:
+      Name: "{{ vpc_name }}-PublicRTBL"
+      environment: "{{ env_name }}"
+    subnets:
+      - "{{ public_subnets }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ rtn_igw.gateway_id }}"
+  register: rtn_public_rtbl
