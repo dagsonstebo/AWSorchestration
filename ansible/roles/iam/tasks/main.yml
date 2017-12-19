@@ -1,0 +1,20 @@
+---
+
+- name: Report roles being created
+  debug: msg="Creating role {{ item.rolename }} with policydocument {{ item.policydoc }}"
+  with_items:
+    - "{{ IAMRoles }}"
+
+# Kept for future use - Dec17 assume_role_policy_document did not work hence using aws cli
+#- name: Create IAM roles
+#  iam_role:
+#    name: "{{ item.rolename }}"
+#    assume_role_policy_document: "{{ lookup('file',item.policydoc) }}"
+#    state: present
+#  with_items:
+#    - "{{ IAMRoles }}"
+
+- name: Create IAM roles
+  shell: aws iam create-role --role-name "{{ item.rolename }}" --assume-role-policy-document file://"{{ role_path }}/files/{{ item.policydoc }}"
+  with_items:
+    - "{{ IAMRoles }}"

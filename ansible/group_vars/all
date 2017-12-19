@@ -8,23 +8,14 @@ aws_zone: eu-west-2a
 # Environment
 env_name: Development1
 
-#VPCs
-#vpc_name: DSVPC2
-#vpc_cidr: 10.1.0.0/16
-#vpc_subnets:
-#  subnet1:
-#    name: 10.1.0.0-eu-west-2a-PUBLIC
-#    az: eu-west-2a
-#    cidr: 10.1.0.0/24
-#    access: public
-#    auto_assign_public_ip: true
-#  subnet2:
-#    name: 10.1.1.0-eu-west-2b-PRIVATE
-#    az: eu-west-2b
-#    cidr: 10.1.1.0/24
-#    access: private
-#    auto_assign_public_ip: false
+# IAM roles and policies
+IAMRoles:
+  - rolename: EC2-S3-ReadOnly
+    rolearn: "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+    policydoc: AmazonS3ReadOnlyAccess.json
 
+
+# Networking
 VPCs:
   - vpc_name: DSVPC21
     vpc_cidr: 10.21.0.0/16
