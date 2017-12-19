@@ -27,33 +27,37 @@ env_name: Development1
 
 VPCs:
   - vpc_name: DSVPC21
-    vpc_cidr: 10.1.0.0/16
+    vpc_cidr: 10.21.0.0/16
     vpc_region: eu-west-2
     vpc_create_igw: true
     vpc_subnets:
-      - subnet_name: 10.1.0.0-eu-west-2a-PUBLIC
+      - subnet_name: 10.21.0.0-euwest2a-PUBLIC
         az: eu-west-2a
-        cidr: 10.1.0.0/24
+        cidr: 10.21.0.0/24
         access: public
         auto_assign_public_ip: true
-      - subnet_name: 10.1.1.0-eu-west-2b-PRIVATE
+        create_nat_gw: true
+      - subnet_name: 10.21.1.0-euwest2b-PRIVATE
         az: eu-west-2b
-        cidr: 10.1.1.0/24
+        cidr: 10.21.1.0/24
         access: private
         auto_assign_public_ip: false
+        create_nat_gw: false
 
   - vpc_name: DSVPC22
-    vpc_cidr: 10.1.2.0/16
+    vpc_cidr: 10.22.0.0/16
     vpc_region: eu-west-2
     vpc_create_igw: true
     vpc_subnets:
-      - subnet_name: 10.1.2.0-eu-west-2a-PUBLIC
+      - subnet_name: 10.22.0.0-euwest2a-PUBLIC
         az: eu-west-2a
-        cidr: 10.1.2.0/24
+        cidr: 10.22.0.0/24
         access: public
         auto_assign_public_ip: true
-      - subnet_name: 10.1.2.0-eu-west-2b-PRIVATE
+        create_nat_gw: false
+      - subnet_name: 10.22.1.0-euwest2b-PRIVATE
         az: eu-west-2b
-        cidr: 10.1.2.0/24
+        cidr: 10.22.1.0/24
         access: private
         auto_assign_public_ip: false
+        create_nat_gw: false
