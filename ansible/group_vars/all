@@ -12,7 +12,7 @@ env_name: Development1
 IAMRoles:
   - rolename: EC2-S3-ReadOnly
     rolearn: "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-    policydoc: AmazonS3ReadOnlyAccess.json
+    policydoc: EC2trustpolicydoc.json
 
 
 # Networking
