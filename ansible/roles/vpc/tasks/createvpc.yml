@@ -54,6 +54,29 @@
       - "Private subnets {{ private_subnets | join('+') }}"
       - "NAT gateway subnets {{ natgw_subnets | join('+') }}"
 
+- name: Find default route table
+  ec2_vpc_route_table_facts:
+    region: "{{ outer_item.vpc_region }}"
+    filters:
+      association.main: "true"
+      vpc-id: "{{ rtn_vpc.vpc.id }}"
+  register: rtn_rtblfacts
+
+- name: Report route table ID
+  debug: msg="Default route table for VPC {{ rtn_vpc.vpc.id }} is {{ rtn_rtblfacts.route_tables.0.id }}"
+
+# NOT IDEMPOTENT - CREATES NEW ROUTE TABLE
+#- name: Tag default route table since Amazon isn't doing it for us
+#  ec2_vpc_route_table:
+#    vpc_id: "{{ rtn_vpc.vpc.id }}"
+#    region: "{{ outer_item.vpc_region }}"
+#    route_table_id: "{{ rtn_rtblfacts.route_tables.0.id }}"
+#    tags:
+#      Name: "{{ outer_item.vpc_name }}-DefaultRTBL"
+
+- name: Tag default route table
+  shell: aws ec2 create-tags --resources "{{ rtn_rtblfacts.route_tables.0.id }}" --tags Key=Name,Value="{{ outer_item.vpc_name }}-DefaultRTBL"
+
 - name: Create IGW
   ec2_vpc_igw:
     region: "{{ outer_item.vpc_region }}"
@@ -87,17 +110,17 @@
   with_items:
     - "{{ public_subnets }}"
 
-- name: Create NAT gw
-  ec2_vpc_nat_gateway:
-    state: present
-    subnet_id: "{{ item }}"
-    wait: yes
-    region: "{{ outer_item.vpc_region }}"
-    if_exist_do_not_create: true
-  with_items:
-    - "{{ natgw_subnets }}"
-  register: rtn_nat_gw
+#- name: Create NAT gw
+#  ec2_vpc_nat_gateway:
+#    state: present
+#    subnet_id: "{{ item }}"
+#    wait: yes
+#    region: "{{ outer_item.vpc_region }}"
+#    if_exist_do_not_create: true
+#  with_items:
+#    - "{{ natgw_subnets }}"
+#  register: rtn_nat_gw
 
-- name: Report NAT gateways
-  debug: msg="IPv4 NAT gateway {{ item.nat_gateway_id }} created in VPC {{ item.vpc_id }} / subnet {{ item.subnet_id }}."
-  with_items: "{{ rtn_nat_gw.results }}"
+#- name: Report NAT gateways
+#  debug: msg="IPv4 NAT gateway {{ item.nat_gateway_id }} created in VPC {{ item.vpc_id }} / subnet {{ item.subnet_id }}."
+#  with_items: "{{ rtn_nat_gw.results }}"
