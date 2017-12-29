@@ -14,13 +14,14 @@ IAMRoles:
     rolearn: "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
     policydoc: EC2trustpolicydoc.json
 
-
 # Networking
 VPCs:
   - vpc_name: DSVPC21
     vpc_cidr: 10.21.0.0/16
     vpc_region: eu-west-2
     vpc_create_igw: true
+    vpc_create_vpce: true
+    vpc_endpoint_service: com.amazonaws.eu-west-2.s3
     vpc_subnets:
       - subnet_name: 10.21.0.0-euwest2a-PUBLIC
         az: eu-west-2a
@@ -39,6 +40,8 @@ VPCs:
     vpc_cidr: 10.22.0.0/16
     vpc_region: eu-west-2
     vpc_create_igw: true
+    vpc_create_vpce: true
+    vpc_endpoint_service: com.amazonaws.eu-west-2.s3
     vpc_subnets:
       - subnet_name: 10.22.0.0-euwest2a-PUBLIC
         az: eu-west-2a

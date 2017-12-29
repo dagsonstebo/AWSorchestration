@@ -1,10 +1,5 @@
 ---
 
-#- name: test dictionaries
-#  debug: msg="{{ outer_item.vpc_name }} {{ outer_item.vpc_cidr }} subnet {{ item.access }}"
-#  with_items:
-#    - "{{ outer_item.vpc_subnets }}"
-
 - name: Create VPC
   ec2_vpc_net:
     name: "{{ outer_item.vpc_name }}"
@@ -45,7 +40,7 @@
   set_fact:
     public_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.access', '==', 'public') | map(attribute='subnet.id') | list}}"
     private_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.access', '!=', 'public') | map(attribute='subnet.id') | list}}"
-    natgw_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.natgw', '==', 'True') | map(attribute='subnet.id') | list}}"
+    natgw_subnets: "{{ rtn_subnets.results | selectattr('subnet.tags.natgw', '==', True) | map(attribute='subnet.id') | list}}"
 
 - name: Report public and private subnets
   debug:
@@ -90,6 +85,19 @@
 - name: Report created IGW
   debug: msg="IGW created with ID {{ rtn_igw.gateway_id }} and tags {{ rtn_igw.tags }}"
 
+- name: Create VPC endpoint
+  ec2_vpc_endpoint:
+    state: present
+    region: "{{ outer_item.vpc_region }}"
+    vpc_id: "{{ rtn_vpc.vpc.id }}"
+    service: "{{ outer_item.vpc_endpoint_service }}"
+    route_table_ids:
+      - "{{ rtn_rtblfacts.route_tables.0.id }}"
+  register: rtn_vpcendpoint
+
+- name: Report VPC endpoint
+  debug: msg="VPC endpoint ID {{ rtn_vpcendpoint.result.vpc_endpoint_id }} created in {{ rtn_vpcendpoint.result.vpc_id }}."
+
 - name: Set up public subnet route table, don't associate yet
   ec2_vpc_route_table:
     vpc_id: "{{ rtn_vpc.vpc.id }}"
@@ -102,7 +110,7 @@
         gateway_id: "{{ rtn_igw.gateway_id }}"
   register: rtn_public_rtbl
 
-- name: Report created route table
+- name: Report created public route table
   debug: msg="Public route table {{ rtn_public_rtbl.route_table.tags.Name }} created {{ rtn_public_rtbl.route_table.id }}"
 
 - name: Assign route table - done using AWS CLI as ec2_vpc_route_table not idempotent in Ansible 2.4.2
@@ -110,17 +118,46 @@
   with_items:
     - "{{ public_subnets }}"
 
-#- name: Create NAT gw
-#  ec2_vpc_nat_gateway:
-#    state: present
-#    subnet_id: "{{ item }}"
-#    wait: yes
-#    region: "{{ outer_item.vpc_region }}"
-#    if_exist_do_not_create: true
-#  with_items:
-#    - "{{ natgw_subnets }}"
-#  register: rtn_nat_gw
+- name: Find default NACL
+  ec2_vpc_nacl_facts:
+    region: "{{ outer_item.vpc_region }}"
+    filters:
+      default: "true"
+      vpc-id: "{{ rtn_vpc.vpc.id }}"
+  register: rtn_defnacl
 
-#- name: Report NAT gateways
-#  debug: msg="IPv4 NAT gateway {{ item.nat_gateway_id }} created in VPC {{ item.vpc_id }} / subnet {{ item.subnet_id }}."
-#  with_items: "{{ rtn_nat_gw.results }}"
+- name: Report NACL
+  debug: msg="Default NACL for {{ rtn_vpc.vpc.id }} is {{ rtn_defnacl.nacls.0.nacl_id }}"
+
+- name: Tag default NACL
+  shell: aws ec2 create-tags --resources "{{ rtn_defnacl.nacls.0.nacl_id }}" --tags Key=Name,Value="{{ outer_item.vpc_name }}-DefaultNACL"
+
+- name: Create NAT gw
+  ec2_vpc_nat_gateway:
+    state: present
+    subnet_id: "{{ item }}"
+    wait: yes
+    region: "{{ outer_item.vpc_region }}"
+    if_exist_do_not_create: true
+  with_items:
+    - "{{ natgw_subnets }}"
+  register: rtn_nat_gw
+
+- name: Report NAT gateways
+  debug: msg="IPv4 NAT gateway {{ item.nat_gateway_id }} created in VPC {{ item.vpc_id }} / subnet {{ item.subnet_id }}."
+  with_items: "{{ rtn_nat_gw.results }}"
+
+# As above - ec2_vpc_route_table is not idempotent, reverting to aws cli
+#- name: Add NAT gw to default route table for each VPC
+#  ec2_vpc_route_table:
+#    vpc_id: "{{ rtn_vpc.vpc.id }}"
+#    region: "{{ outer_item.vpc_region }}"
+#    route_table_id: "{{ rtn_rtblfacts.route_tables.0.id }}"
+#    routes:
+#      - dest: 0.0.0.0/0
+#        gateway_id: "{{ rtn_nat_gw.results.0.nat_gateway_id }}"
+
+- name: Add NAT gw to default route table for each VPC
+  shell: aws ec2 create-route --route-table-id "{{ rtn_rtblfacts.route_tables.0.id }}" --destination-cidr-block 0.0.0.0/0 --gateway-id "{{ item.nat_gateway_id }}"
+  with_items: "{{ rtn_nat_gw.results }}"
+  ignore_errors: true

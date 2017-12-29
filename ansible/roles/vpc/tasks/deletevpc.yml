@@ -1,0 +1,36 @@
+---
+
+- name: Find NAT gw
+  ec2_vpc_net_facts:
+    region: "{{ outer_item.vpc_region }}"
+    filters:
+      tag:Name: "{{ outer_item.vpc_name }}"
+  register: rtn_vpcs
+
+- name: Report VPCs
+  debug: msg="VPC {{ outer_item.vpc_name }} is ID {{ rtn_vpcs.vpcs.0.id }}"
+
+- name: Find NAT gw
+  ec2_vpc_nat_gateway_facts:
+    region: "{{ outer_item.vpc_region }}"
+    filters:
+      vpc-id: "{{ rtn_vpcs.vpcs.0.id }}"
+  register: rtn_nat_gws
+
+- name: Report NAT gateways
+  debug: msg="{{ rtn_nat_gws.result.0.nat_gateway_id }}"
+
+
+
+#- name: Delete NAT gw
+#  ec2_vpc_nat_gateway:
+#    state: absent
+#    wait: yes
+#    region: "{{ outer_item.vpc_region }}"
+
+#- name: Delete VPC
+#  ec2_vpc_net:
+#    name: "{{ outer_item.vpc_name }}"
+#    region: "{{ outer_item.vpc_region }}"
+#    state: absent
+

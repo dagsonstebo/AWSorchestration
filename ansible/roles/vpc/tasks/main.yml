@@ -6,3 +6,12 @@
     - "{{ VPCs }}"
   loop_control:
     loop_var: outer_item
+  when: action == "add"
+
+- name: Delete VPCs, subnets, IGW and route tables
+  include_tasks: ./deletevpc.yml
+  with_items:
+    - "{{ VPCs }}"
+  loop_control:
+    loop_var: outer_item
+  when: action == "remove"
